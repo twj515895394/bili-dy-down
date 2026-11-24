@@ -147,6 +147,8 @@ async def bili_parse_urls(req: BiliParseRequest):
         )
 
     cookie = req.bilibili_cookie or None
+    if not cookie and ctx.config_repo is not None:
+        cookie = decrypt_secret(ctx.config_repo.get("bilibili_cookie") or "") or None
 
     async def _parse_one(url: str) -> BiliParseResult:
         try:
