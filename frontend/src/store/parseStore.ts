@@ -11,6 +11,9 @@ export interface ParsedResult {
   author: string;
   type: "video" | "image_set" | "long_video" | "user_home";
   awemeId?: string;
+  platform?: "douyin" | "bilibili";
+  bvid?: string;
+  pages?: api.BiliParseResult["pages"];
   coverUrl?: string;
   duration?: string;
   imageCount?: number;
@@ -73,9 +76,9 @@ export const useParseStore = create<ParseStore>((set) => ({
 parseUrls: async (urls: string[]) => {
 	    set({ batchLoading: true, batchError: null }); // 不再清空 batchResults（追加模式）
 	    try {
-	      const rawResults = await api.parseUrls(urls);
+	      const rawResults = await api.parseMixedUrls(urls);
 	      set((state) => {
-	        const offset = state.batchResults.length;
+	        const offset = Math.max(-1, ...state.batchResults.map(r => r.index)) + 1;
             const results: ParsedResult[] = rawResults.map((r: api.ParseResult, i: number) => ({
               index: offset + i,
           url: urls[i] || r.url || "",
@@ -83,6 +86,7 @@ parseUrls: async (urls: string[]) => {
           author: r.author || "",
           type: (r.type as ParsedResult["type"]) || "video",
           awemeId: r.aweme_id,
+          platform: r.platform, bvid: r.bvid, pages: r.pages,
           coverUrl: r.cover_url,
           duration: r.duration,
           imageCount: r.image_count,
@@ -114,7 +118,7 @@ parseUrls: async (urls: string[]) => {
     try {
       // 按索引收集待重试的 URL（保持与入参索引一一对应）
       const urls = indices.map((idx) => useParseStore.getState().batchResults[idx]?.url || "");
-      const rawResults = await api.parseUrls(urls);
+      const rawResults = await api.parseMixedUrls(urls);
       set((state) => {
         const next = [...state.batchResults];
         indices.forEach((idx, k) => {
@@ -129,6 +133,7 @@ parseUrls: async (urls: string[]) => {
             author: r.author || "",
             type: (r.type as ParsedResult["type"]) || "video",
             awemeId: r.aweme_id,
+          platform: r.platform, bvid: r.bvid, pages: r.pages,
             coverUrl: r.cover_url,
             duration: r.duration,
             imageCount: r.image_count,
@@ -179,6 +184,7 @@ fetchHome: async (url: string, maxItems = 50) => {
           author: r.author || "",
           type: (r.type as ParsedResult["type"]) || "video",
           awemeId: r.aweme_id,
+          platform: r.platform, bvid: r.bvid, pages: r.pages,
           coverUrl: r.cover_url,
           duration: r.duration,
           imageCount: r.image_count,
@@ -214,7 +220,9 @@ fetchHome: async (url: string, maxItems = 50) => {
 
   downloadSelected: async (items: ParsedResult[], downloadDir?: string, imageSelection?: Map<number, number[]>) => {
     // 仅入队可下载项（跳过 user_home 与解析失败项），返回实际入队的解析项
-    const enqueued = items.filter((item) => item.type !== "user_home" && !item.error);
+    const eligible = items.filter((item) => item.type !== "user_home" && !item.error);
+    const enqueued = eligible.filter(item => item.platform !== "bilibili");
+    const biliDone: ParsedResult[] = [];
     const downloadItems = enqueued
       .map((item) => {
         // 如果该 item 有图片选择信息，仅提交选中的图片；否则提交全部
@@ -251,14 +259,19 @@ fetchHome: async (url: string, maxItems = 50) => {
         };
       });
 
-    if (downloadItems.length === 0) return [];
-
-    await api.startDownload({
+    if (downloadItems.length > 0) await api.startDownload({
       source_type: "batch",
       items: downloadItems,
       download_dir: downloadDir,
     });
-    return enqueued;
+    for (const item of eligible.filter(i => i.platform === "bilibili")) {
+      if (!item.bvid || !item.pages?.length) continue;
+      try { const result = await api.enqueueBiliVideo({ ...item, bvid:item.bvid, pages:item.pages }, downloadDir);
+        if (result.queued > 0 && !result.failed) biliDone.push(item);
+        else if (result.queued > 0) { /* retain partial result for retry */ }
+      } catch { /* retain failed result */ }
+    }
+    return [...enqueued, ...biliDone];
   },
 }));
 
@@ -269,6 +282,6 @@ export function extractLinks(text: string): string[] {
   if (!matches) return [];
   return matches.filter((url) => {
     const lower = url.toLowerCase();
-    return lower.includes("douyin.com") || lower.includes("iesdouyin.com");
+    return api.isBiliLink(url) || (() => { try { const h = new URL(lower).hostname; return h === "douyin.com" || h.endsWith(".douyin.com") || h === "iesdouyin.com" || h.endsWith(".iesdouyin.com"); } catch { return false; } })();
   });
 }

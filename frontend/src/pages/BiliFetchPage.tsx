@@ -90,9 +90,9 @@ interface BiliParsedItem {
   selectedPages: number[] | null;
 }
 
-export default function BiliFetchPage() {
+export default function BiliFetchPage({initialMode = "video"}: {initialMode?: "video" | "profile"} = {}) {
   const [links, setLinks] = useState("");
-  const [mode, setMode] = useState<"video" | "profile" | "collection">("video");
+  const [mode, setMode] = useState<"video" | "profile" | "collection">(initialMode);
   const [profileCount, setProfileCount] = useState(50);
   const [profileMeta, setProfileMeta] = useState<{ total?: number; hasMore: boolean; loaded: number } | null>(null);
   const [order, setOrder] = useState<"pubdate" | "click">("pubdate");

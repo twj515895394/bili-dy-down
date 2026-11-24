@@ -197,6 +197,7 @@ export default function BatchFetchPage() {
         removeBatchItems(new Set(enqueued.map((i) => i.index)));
         addToast(`下载任务已创建（${enqueued.length} 项）`, "success");
       }
+      if (enqueued.length < items.length) addToast("部分作品未能入队，已保留在列表中，请重试", "warning");
       // 清空选择
       setSelected(new Set());
       setImageSelection(new Map());
@@ -230,7 +231,7 @@ export default function BatchFetchPage() {
     <>
       <div className="p-4 pb-2">
         <HeroTextarea
-          placeholder="在此粘贴抖音链接，每行一个&#10;支持视频链接、图文链接、用户主页链接"
+          placeholder="在此粘贴抖音 / B站链接，每行一个&#10;支持混合视频链接，抖音图文；主页请使用主页抓取"
           value={links}
           onChange={(e) => setLinks(e.target.value)}
         />
@@ -356,7 +357,7 @@ export default function BatchFetchPage() {
               const totalImgs = item.imageUrls?.length ?? 0;
               return (
                 <motion.div
-                  key={item.awemeId || item.url || `item-${item.index}`}
+                  key={item.index}
                   custom={i}
                   variants={resultItemVariants}
                   initial="hidden"
@@ -403,7 +404,7 @@ export default function BatchFetchPage() {
                         {item.error ? (
                           <span className="text-error">{item.error}</span>
                         ) : (
-                          `@${item.author || "未知作者"}`
+                          `${item.platform === "bilibili" ? "B站" : "抖音"} · @${item.author || "未知作者"}`
                         )}
                       </div>
                     </div>

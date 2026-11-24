@@ -115,7 +115,7 @@ export async function fetchTaskItems(taskId: number): Promise<TaskItemResponse[]
 export async function startDownload(params: {
   source_type?: string;
   source_url?: string | null;
-  items?: { url: string; title?: string; author?: string; type?: string; aweme_id?: string; cover_url?: string; image_count?: number; no_watermark_url?: string; image_urls?: string[]; item_video_urls?: string[]; item_types?: string[] }[];
+  items?: { url: string; title?: string; author?: string; type?: string; aweme_id?: string; cover_url?: string; image_count?: number; no_watermark_url?: string; image_urls?: string[]; item_video_urls?: string[]; item_types?: string[]; bvid?: string; cid?: number; page?: number; audio_url?: string }[];
   download_dir?: string;
 }): Promise<{ task_id: number; message: string }> {
   return request("/download/start", {
@@ -169,6 +169,9 @@ export async function verifyCompletedFiles(): Promise<{ verified_count: number; 
 /** 后端 /crawler/parse 与 /crawler/fetch-home 返回的解析结果项 */
 export interface ParseResult {
   url: string;
+  platform?: "douyin" | "bilibili";
+  bvid?: string;
+  pages?: BiliParseResult["pages"];
   title?: string;
   author?: string;
   type?: "video" | "image_set" | "long_video" | "user_home";
@@ -468,4 +471,55 @@ export async function scanAndCollect(
   subId: number,
 ): Promise<{ message: string; queued: number; task_id: number; scan_status: string; scan_error: string | null }> {
   return request(`/subscription/${subId}/scan-and-collect`, { method: "POST" });
+}
+export function isBiliLink(url: string): boolean {
+  try { const h = new URL(url).hostname; return h === "b23.tv" || h === "bilibili.com" || h.endsWith(".bilibili.com"); } catch { return false; }
+}
+
+export async function parseMixedUrls(urls: string[]): Promise<ParseResult[]> {
+  const result: ParseResult[] = urls.map(url => ({ url, error: "未解析" }));
+  for (const bili of [false, true]) {
+    const indices = urls.map((_, i) => i).filter(i => isBiliLink(urls[i]) === bili);
+    for (let offset = 0; offset < indices.length; offset += 50) {
+      const chunk = indices.slice(offset, offset + 50);
+      try {
+        if (bili) {
+          const data = await biliParseUrls(chunk.map(i => urls[i]));
+          chunk.forEach((i, j) => {
+            const r = data[j];
+            result[i] = r ? { url: r.url, platform: "bilibili", bvid: r.bvid, pages: r.pages,
+              title: r.title, author: r.author, cover_url: r.cover_url,
+              duration: r.duration == null ? undefined : String(r.duration) + "秒",
+              publish_time: r.publish_time ? new Date(r.publish_time * 1000).toISOString() : undefined,
+              type: r.bvid ? "video" : "user_home", error: r.error || (!r.bvid ? "请在主页抓取中解析" : undefined) } : result[i];
+          });
+        } else {
+          const data = await parseUrls(chunk.map(i => urls[i]));
+          chunk.forEach((i,j) => { if (data[j]) result[i] = { ...data[j], platform: "douyin" }; });
+        }
+      } catch (e) {
+        chunk.forEach(i => { result[i] = { url: urls[i], platform: bili ? "bilibili" : "douyin", error: e instanceof Error ? e.message : "解析失败" }; });
+      }
+    }
+  }
+  return result;
+}
+
+export async function enqueueBiliVideo(item: {bvid: string; title: string; author: string; coverUrl?: string; pages: NonNullable<BiliParseResult["pages"]>}, downloadDir?: string): Promise<{queued: number; failed: number}> {
+  const items: NonNullable<Parameters<typeof startDownload>[0]["items"]> = [];
+  let failed = 0;
+  for (const page of item.pages) {
+    try {
+      if (!page.cid) throw new Error("缺少 CID");
+      const p = await biliPlayurl(item.bvid, page.cid);
+      const best = (streams: BiliStreamInfo[]) => [...streams].sort((a,b) => b.bandwidth-a.bandwidth)[0]?.url;
+      const video = p.dash ? best(p.video_streams) : p.url;
+      const audio = p.dash ? best(p.audio_streams) : undefined;
+      if (!video || (p.dash && !audio)) throw new Error("缺少可用播放流");
+      items.push({url: video, no_watermark_url: video, audio_url: audio, bvid: item.bvid, aweme_id: item.bvid, cid: page.cid, page: page.page,
+        title: item.title + (item.pages.length > 1 ? " P"+page.page : ""), author: item.author, cover_url: item.coverUrl, type: "video"});
+    } catch { failed++; }
+  }
+  if (items.length) await startDownload({source_type:"bilibili", items, download_dir:downloadDir});
+  return {queued:items.length, failed};
 }
