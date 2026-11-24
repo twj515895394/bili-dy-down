@@ -1,0 +1,2 @@
+# BiliDyDown 品牌更名
+用户确认使用 B/D 渐变图标。当前仓库使用批准图片的 128px 量化缩略版，Windows ICO 为单尺寸 PNG 图标；完整高清源图尚未提交。后续应使用高清源 PNG 运行 Tauri icon 生成完整多尺寸资源。原有数据目录、安装标识及上游版权保留兼容；新安装采用 BiliDyDown 数据目录。尚未执行构建或人工验证。旧版 splashLettering 不再由启动页调用。

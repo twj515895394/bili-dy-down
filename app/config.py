@@ -14,11 +14,14 @@ from pathlib import Path
 
 # === APPDATA 路径常量 ===
 # Windows 下 %APPDATA% 指向用户应用数据目录；非 Windows 环境回退到用户主目录
-APP_DATA_DIR: Path = Path(os.environ.get("APPDATA", str(Path.home()))) / "VideoGetTool"
+_DATA_ROOT = Path(os.environ.get("APPDATA", str(Path.home())))
+_LEGACY_DATA_DIR = _DATA_ROOT / "VideoGetTool"
+# Preserve existing SQLite records and DPAPI credentials; fresh installs use new brand.
+APP_DATA_DIR: Path = _LEGACY_DATA_DIR if (_LEGACY_DATA_DIR / "data.db").exists() and not (_DATA_ROOT / "BiliDyDown" / "data.db").exists() else _DATA_ROOT / "BiliDyDown"
 DB_PATH: Path = APP_DATA_DIR / "data.db"
 LOG_DIR: Path = APP_DATA_DIR / "logs"
 LOG_FILE: Path = LOG_DIR / "app.log"
-DEFAULT_DOWNLOAD_DIR: Path = Path.home() / "Downloads" / "VideoGetTool"
+DEFAULT_DOWNLOAD_DIR: Path = Path.home() / "Downloads" / "BiliDyDown"
 
 # === 默认配置值 ===
 # 与 config 表键值对应，用于首次初始化插入

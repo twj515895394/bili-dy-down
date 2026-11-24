@@ -1,5 +1,5 @@
 [project]
-name = "video-get-tool"
+name = "bili-dy-down"
 version = "0.4.1"
 description = "抖音短视频（含图文、长视频）数据抓取的 Windows 桌面端应用"
 authors = [{ name = "VideoGetTool Contributors" }]

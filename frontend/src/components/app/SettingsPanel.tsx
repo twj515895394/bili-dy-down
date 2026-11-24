@@ -307,7 +307,7 @@ export default function SettingsPanel() {
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-sm text-text-primary">日志位置</span>
-                  <p className="text-xs text-text-disabled mt-0.5">%APPDATA%\VideoGetTool\logs\app.log</p>
+                  <p className="text-xs text-text-disabled mt-0.5">%APPDATA%\BiliDyDown\logs\app.log（旧版数据目录可能保留）</p>
                 </div>
                 <Button variant="secondary" size="sm" disabled>
                   <FolderOpen size={14} className="mr-1" /> 导出日志
@@ -442,7 +442,7 @@ export default function SettingsPanel() {
           {/* ── 底部操作按钮 ── */}
           <div className="flex items-center justify-center gap-3 pt-4 pb-2">
             <button
-              onClick={() => openExternal("https://github.com/Cat-Drink/VideoGetTool/issues")}
+              onClick={() => openExternal("https://github.com/twj515895394/bili-dy-down/issues")}
               className="flex items-center gap-2 px-4 h-9 text-sm text-text-secondary bg-bg-base border border-border-light rounded-md hover:bg-bg-hover hover:text-text-primary transition-colors"
             >
               <MessageSquare size={14} />
@@ -470,9 +470,9 @@ export default function SettingsPanel() {
           {/* ── 底部关于信息 ── */}
           <div className="text-center pt-4 pb-6 space-y-2">
             <div className="flex items-center justify-center gap-2">
-              <span className="text-sm text-text-secondary">VideoGetTool {appVersion}</span>
+              <span className="text-sm text-text-secondary">BiliDyDown {appVersion}</span>
               <button
-                onClick={() => openExternal("https://github.com/Cat-Drink/VideoGetTool/releases")}
+                onClick={() => openExternal("https://github.com/twj515895394/bili-dy-down/releases")}
                 className="text-xs text-purple-500 hover:underline"
               >
                 检查更新
@@ -481,14 +481,14 @@ export default function SettingsPanel() {
             <p className="text-xs text-text-disabled">让复制与粘贴，保持有序</p>
             <div className="flex items-center justify-center gap-4 pt-1">
               <button
-                onClick={() => openExternal("https://github.com/Cat-Drink/VideoGetTool")}
+                onClick={() => openExternal("https://github.com/twj515895394/bili-dy-down")}
                 className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
               >
                 <ExternalLink size={14} />
                 GitHub
               </button>
               <button
-                onClick={() => openExternal("https://github.com/Cat-Drink/VideoGetTool")}
+                onClick={() => openExternal("https://github.com/twj515895394/bili-dy-down")}
                 className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
               >
                 <Globe size={14} />

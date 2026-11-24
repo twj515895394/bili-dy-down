@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="assets/app-icon.png" alt="VideoGetTool" width="112">
+  <img src="assets/app-icon.png" alt="BiliDyDown" width="112">
 
-  # VideoGetTool
+  # BiliDyDown
 
   <p align="center">
     <strong>「让视频获取更简单」</strong>
@@ -12,7 +12,7 @@
   </p>
 
   <p align="center">
-    <a href="https://github.com/Cat-Drink/VideoGetTool/releases">
+    <a href="https://github.com/twj515895394/bili-dy-down/releases">
       <img src="https://img.shields.io/github/v/release/Cat-Drink/VideoGetTool?style=flat-square&label=%E7%89%88%E6%9C%AC&color=7C3AED" alt="版本">
     </a>
     <img src="https://img.shields.io/badge/Python-3.11+-4B8BBE?style=flat-square&logo=python&logoColor=white" alt="Python">
@@ -45,7 +45,7 @@
 
 <br>
 
-> **VideoGetTool (VGT)** —— 名字取自 "Video Get Tool"（视频获取工具），寓意轻松获取网络上的精彩视频。
+> **BiliDyDown** —— 面向 B站与抖音的轻量桌面视频采集和下载工具，基于上游 BiliDyDown 增强开发。
 > 一款面向非技术用户的 Windows 桌面端应用，支持抖音（Douyin）与 B 站（Bilibili）短视频、图文、长视频的数据抓取与下载。
 > 参考 [Evil0ctal/Douyin_TikTok_Download_API](https://github.com/Evil0ctal/Douyin_TikTok_Download_API) 的设计思路，但 **不直接复用其代码**，有效降低外部依赖风险。
 
@@ -164,17 +164,17 @@
 
 ### 📦 下载安装
 
-从 [GitHub Releases](https://github.com/Cat-Drink/VideoGetTool/releases) 页面下载最新版安装包：
+从 [GitHub Releases](https://github.com/twj515895394/bili-dy-down/releases) 页面下载最新版安装包：
 
 ```text
-VideoGetTool_0.3.0_x64-setup.exe
+BiliDyDown_0.3.0_x64-setup.exe
 ```
 
 运行安装包，按向导提示完成安装即可。
 
 > **💡 需要自行安装 ffmpeg（仅下载 B 站视频时必需）**
 >
-> B 站的高清视频（720P 及以上）采用 DASH 格式，音视频流是分离的，下载后需要 **ffmpeg** 将它们合并成带声音的完整视频。VideoGetTool **不会自动捆绑或下载 ffmpeg**，需要你自行安装。抖音视频下载**不需要** ffmpeg。
+> B 站的高清视频（720P 及以上）采用 DASH 格式，音视频流是分离的，下载后需要 **ffmpeg** 将它们合并成带声音的完整视频。BiliDyDown **不会自动捆绑或下载 ffmpeg**，需要你自行安装。抖音视频下载**不需要** ffmpeg。
 
 <details>
 <summary><strong>📋 点击查看 ffmpeg 安装方法（Windows）</strong></summary>
@@ -189,14 +189,14 @@ VideoGetTool_0.3.0_x64-setup.exe
 winget install Gyan.FFmpeg
 ```
 
-安装完成后**重新打开** VideoGetTool（或重启应用），即可自动识别。
+安装完成后**重新打开** BiliDyDown（或重启应用），即可自动识别。
 
 **方式二：官网手动下载**
 
 1. 打开 [gyan.dev 官方构建页](https://www.gyan.dev/ffmpeg/builds/)（或 [ffmpeg.org 下载页](https://ffmpeg.org/download.html)）
 2. 下载 **ffmpeg-release-essentials.zip**（约 80MB）并解压
-3. 将解压出的 `bin\ffmpeg.exe` 所在目录加入系统 **PATH** 环境变量（或把 `ffmpeg.exe` 复制到 VideoGetTool 的 `resources\ffmpeg\` 目录）
-4. 重新打开 VideoGetTool
+3. 将解压出的 `bin\ffmpeg.exe` 所在目录加入系统 **PATH** 环境变量（或把 `ffmpeg.exe` 复制到 BiliDyDown 的 `resources\ffmpeg\` 目录）
+4. 重新打开 BiliDyDown
 
 **验证是否安装成功**
 
@@ -363,7 +363,7 @@ npm run tauri build -- --bundles nsis
 项目采用 **前后端分离 + Sidecar 架构**：Tauri 桌面壳承载 React 前端，前端通过 REST / WebSocket 与 Python FastAPI sidecar 通信。
 
 ```text
-📦 VideoGetTool/
+📦 BiliDyDown/
 ├── 📂 backend/            # FastAPI 后端（REST + WebSocket）
 │   ├── 📂 api/            #   路由：crawler / download / bilibili / cookie / config / ws / subscription
 │   ├── 📂 services/       #   服务层（订阅扫描器 subscription_scanner）
@@ -400,7 +400,7 @@ npm run tauri build -- --bundles nsis
 
 <br>
 
-B 站的高清视频（720P 及以上）采用 DASH 格式，音视频流是分离的。VideoGetTool 会检测到 DASH 流，需要调用 **ffmpeg** 将音视频合并。如果下载后没有声音（或下载失败提示"未找到 ffmpeg"），说明系统中尚未安装 ffmpeg 或应用未识别到它——请参照 [快速上手 → 下载安装](#📦-下载安装) 中的方法安装 ffmpeg 后重试。
+B 站的高清视频（720P 及以上）采用 DASH 格式，音视频流是分离的。BiliDyDown 会检测到 DASH 流，需要调用 **ffmpeg** 将音视频合并。如果下载后没有声音（或下载失败提示"未找到 ffmpeg"），说明系统中尚未安装 ffmpeg 或应用未识别到它——请参照 [快速上手 → 下载安装](#📦-下载安装) 中的方法安装 ffmpeg 后重试。
 
 </details>
 
@@ -409,7 +409,7 @@ B 站的高清视频（720P 及以上）采用 DASH 格式，音视频流是分�
 
 <br>
 
-是的，**必须自行安装**。B 站高品质视频（720P 及以上）的音视频流是分开的，需要用 ffmpeg 合并。VideoGetTool 不会捆绑 ffmpeg，会自动按以下顺序查找：配置路径 → 应用内置 `resources/ffmpeg/ffmpeg.exe` → 系统 PATH。
+是的，**必须自行安装**。B 站高品质视频（720P 及以上）的音视频流是分开的，需要用 ffmpeg 合并。BiliDyDown 不会捆绑 ffmpeg，会自动按以下顺序查找：配置路径 → 应用内置 `resources/ffmpeg/ffmpeg.exe` → 系统 PATH。
 
 **如果找不到 ffmpeg**，B 站 DASH 视频的下载任务会以「DASH 合并失败：未找到 ffmpeg」结束，**不会**生成可播放的成品文件（仅抖音视频不受影响）。
 
@@ -437,7 +437,7 @@ Windows 下推荐使用 winget 一键安装：
 winget install Gyan.FFmpeg
 ```
 
-安装后重新打开 VideoGetTool 即可自动识别。也可前往 [gyan.dev 官方构建页](https://www.gyan.dev/ffmpeg/builds/) 手动下载解压，并将 `bin` 目录加入系统 PATH。验证方法：在命令行执行 `ffmpeg -version`，能输出版本信息即安装成功。
+安装后重新打开 BiliDyDown 即可自动识别。也可前往 [gyan.dev 官方构建页](https://www.gyan.dev/ffmpeg/builds/) 手动下载解压，并将 `bin` 目录加入系统 PATH。验证方法：在命令行执行 `ffmpeg -version`，能输出版本信息即安装成功。
 
 </details>
 
@@ -448,7 +448,7 @@ winget install Gyan.FFmpeg
 
 <br>
 
-默认保存在 `%USERPROFILE%/Downloads/VideoGetTool/` 目录下。你可以在 **设置页** 中随时更改。
+默认保存在 `%USERPROFILE%/Downloads/BiliDyDown/` 目录下。你可以在 **设置页** 中随时更改。
 
 </details>
 
@@ -470,7 +470,7 @@ winget install Gyan.FFmpeg
 
 <br>
 
-欢迎在 [GitHub Issues](https://github.com/Cat-Drink/VideoGetTool/issues) 提交问题或建议。提问前请先搜索是否已有类似问题。
+欢迎在 [GitHub Issues](https://github.com/twj515895394/bili-dy-down/issues) 提交问题或建议。提问前请先搜索是否已有类似问题。
 
 </details>
 
@@ -490,7 +490,7 @@ winget install Gyan.FFmpeg
 
 [查看 LICENSE 文件](LICENSE) · [第三方归属与许可证说明](THIRD-PARTY-NOTICES.md) · [许可证迁移说明 (MIT → Apache 2.0)](docs/compliance/v0.3.0-license-migration.md)
 [GitHub 仓库](https://github.com/Cat-Drink/VideoGetTool) ·
-[提交 Issue](https://github.com/Cat-Drink/VideoGetTool/issues)
+[提交 Issue](https://github.com/twj515895394/bili-dy-down/issues)
 
 <br>
 
@@ -510,7 +510,7 @@ winget install Gyan.FFmpeg
 <div align="center">
   <br>
   <sub>
-    <strong>VideoGetTool</strong> — 用 ❤️ 构建 ·
+    <strong>BiliDyDown</strong> — 用 ❤️ 构建 ·
     <em>视频获取，珍藏每一刻精彩</em>
   </sub>
   <br><br>
@@ -519,6 +519,6 @@ winget install Gyan.FFmpeg
   </sub>
   <br><br>
   <sub>
-    <a href="#VideoGetTool">⬆️ 回到顶部</a>
+    <a href="#BiliDyDown">⬆️ 回到顶部</a>
   </sub>
 </div>

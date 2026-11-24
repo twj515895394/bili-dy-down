@@ -1,24 +1,24 @@
 ; ==============================================================================
-; VideoGetTool Inno Setup 安装脚本
+; BiliDyDown Inno Setup 安装脚本
 ;
 ; 【发布通道声明】当前官方发布通道为 Tauri NSIS 安装包
 ; （.github/workflows/release.yml → npm run tauri build -- --bundles nsis）。
 ; 本 Inno 脚本为历史遗留备用产物，保留用于语言/权限参考，不再作为发布入口。
 ;
 ; 严格遵循规范文档 8.2 节与附录 E。
-; 生成 Windows 安装包：dist/VideoGetTool_Setup_v0.2.0.exe
+; 生成 Windows 安装包：dist/BiliDyDown_Setup_v0.2.0.exe
 ;
 ; 编译命令::
 ;
 ;     "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" installer.iss
 ;
 ; 前置条件::
-;   - PyInstaller 打包完成，dist/VideoGetTool/ 目录存在
+;   - PyInstaller 打包完成，dist/BiliDyDown/ 目录存在
 ;   - Inno Setup 6 已安装（含中文语言包）
 ;   - assets/icon.ico 存在
 ;
 ; 关键设计::
-;   - 卸载只清理 {app}（Program Files），不清理 %APPDATA%/VideoGetTool/（用户数据保留）
+;   - 卸载只清理 {app}（Program Files），不清理 %APPDATA%/BiliDyDown/（用户数据保留）
 ;   - AppId 固定 GUID，发布后不可更改（影响升级识别）
 ;   - 仅支持 Windows x64
 ;
@@ -28,15 +28,15 @@
 ;     docs/compliance/v0.3.0-license-migration.md。
 ; ==============================================================================
 
-	#define MyAppName "VideoGetTool"
+	#define MyAppName "BiliDyDown"
 ; v0.2.1：ISPP 守卫支持 CI 注入版本号
 ; 本地编译用默认值 0.2.0；CI 用 ISCC /DMyAppVersion=<tag版本> 覆盖
 #ifndef MyAppVersion
   #define MyAppVersion "0.4.1"
 #endif
 #define MyAppPublisher "VideoGetTool Contributors"
-#define MyAppExeName "VideoGetTool.exe"
-#define MyAppURL "https://github.com/Cat-Drink/VideoGetTool"
+#define MyAppExeName "BiliDyDown.exe"
+#define MyAppURL "https://github.com/twj515895394/bili-dy-down"
 
 [Setup]
 ; 应用信息
@@ -51,7 +51,7 @@ AppSupportURL={#MyAppURL}
 AppId={{B8F3A2E1-7C4D-4E9F-A1B6-3D5E8F2C7A90}
 
 ; 安装目录与开始菜单
-DefaultDirName={autopf}\VideoGetTool
+DefaultDirName={autopf}\BiliDyDown
 DefaultGroupName={#MyAppName}
 
 ; 卸载图标与显示名称
@@ -60,7 +60,7 @@ UninstallDisplayName={#MyAppName} {#MyAppVersion}
 
 ; 输出配置
 OutputDir=dist
-OutputBaseFilename=VideoGetTool_Setup_v{#MyAppVersion}
+OutputBaseFilename=BiliDyDown_Setup_v{#MyAppVersion}
 
 ; 安装向导图标
 SetupIconFile=assets\icon.ico
@@ -94,7 +94,7 @@ Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: 
 
 [Files]
 ; 打包目录下所有文件（递归）
-Source: "dist\VideoGetTool\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "dist\BiliDyDown\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
 ; 开始菜单快捷方式
@@ -109,5 +109,5 @@ Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: 
 Filename: "{app}\{#MyAppExeName}"; Description: "立即启动 {#MyAppName}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
-; 卸载时清理安装目录（不清理 %APPDATA%/VideoGetTool/，用户数据保留）
+; 卸载时清理安装目录（不清理 %APPDATA%/BiliDyDown/，用户数据保留）
 Type: filesandordirs; Name: "{app}"
