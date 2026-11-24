@@ -95,6 +95,50 @@ export default function BiliFetchPage() {
   const [mode, setMode] = useState<"video" | "profile">("video");
   const [profileCount, setProfileCount] = useState(50);
   const [profileMeta, setProfileMeta] = useState<{ total?: number; hasMore: boolean; loaded: number } | null>(null);
+  const [order, setOrder] = useState<"pubdate" | "click">("pubdate");
+  const [keyword, setKeyword] = useState("");
+  const [source, setSource] = useState<{ url: string; next: number | null; size: number; order: "pubdate" | "click" } | null>(null);
+  const generation = useRef(0);
+  const busy = useRef(false);
+  useEffect(() => () => { generation.current++; busy.current = false; }, []);
+  const cancelCollection = () => { generation.current++; busy.current = false; setLoading(false); };
+  const collectPage = async (url: string, page: number, size: number, sort: "pubdate" | "click", fresh: boolean, count = size) => {
+    if (busy.current || downloading) return;
+    busy.current = true;
+    const token = ++generation.current;
+    setLoading(true);
+    setError(null);
+    if (fresh) { setResults([]); setSelected(new Set()); setProfileMeta(null); }
+    let next: number | null = page;
+    let loaded = 0;
+    try {
+      while (next !== null && loaded < count) {
+        const current: number = next;
+        setSource({ url, next: current, size, order: sort });
+        const data = await api.biliSpacePage(url, current, size, sort);
+        if (token !== generation.current) return;
+        const mapped: BiliParsedItem[] = data.items.filter(r => r.bvid).map(r => ({
+          id: nextItemId++, url: r.url, bvid: r.bvid, title: r.title || "", author: r.author || "",
+          coverUrl: r.cover_url, duration: r.duration, viewCount: r.view_count, publishTime: r.publish_time,
+          pages: [], selectedPages: null,
+        }));
+        setResults(prev => {
+          const seen = new Set(prev.map(r => r.bvid));
+          return [...prev, ...mapped.filter(r => { if (seen.has(r.bvid)) return false; seen.add(r.bvid); return true; })];
+        });
+        loaded += data.items.length;
+        next = data.next_page && data.next_page > current ? data.next_page : null;
+        const more = next !== null;
+        setSource({ url, next, size, order: sort });
+        setProfileMeta(prev => ({ total: data.total ?? undefined, hasMore: more, loaded: (prev?.loaded ?? 0) + data.items.length }));
+        if (!data.items.length) break;
+      }
+    } catch (e) {
+      if (token === generation.current) setError(e instanceof Error ? e.message : "主页抓取失败");
+    } finally {
+      if (token === generation.current) { busy.current = false; setLoading(false); }
+    }
+  };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<BiliParsedItem[]>([]);
@@ -208,16 +252,20 @@ export default function BiliFetchPage() {
       addToast("未找到有效的 B 站链接", "error");
       return;
     }
+    if (mode === "profile") {
+      if (urls.length !== 1) { setError("每次请输入一个 UP 主主页"); return; }
+      const size = profileCount === 20 ? 20 : profileCount === 50 || profileCount === 100 ? 50 : 30;
+      await collectPage(urls[0], 1, size, order, true, profileCount);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      if (mode === "profile" && urls.length !== 1) throw new Error("每次请输入一个 UP 主主页");
-      const space = mode === "profile" ? await api.biliFetchSpace(urls[0], undefined, profileCount) : null;
-      const raw = space ? space.items : await api.biliParseUrls(urls);
-      if (space) setProfileMeta({ total: space.total, hasMore: space.has_more, loaded: raw.length });
+      const raw: api.BiliParseResult[] = [];
+      for (let i = 0; i < urls.length; i += 50) raw.push(...await api.biliParseUrls(urls.slice(i, i + 50)));
       const mapped: BiliParsedItem[] = raw.map((r, i) => ({
         id: nextItemId++,
-        url: space ? r.url : (urls[i] || r.url || ""),
+        url: urls[i] || r.url || "",
         bvid: r.bvid,
         title: r.title || "",
         author: r.author || "",
@@ -251,7 +299,7 @@ export default function BiliFetchPage() {
         );
       } else {
         // 全部成功才自动清空输入框 (issue-8)
-        if (!space) setLinks("");
+        setLinks("");
         addToast(`解析完成：${mapped.length} 条`, "success");
       }
     } catch (e) {
@@ -282,14 +330,14 @@ export default function BiliFetchPage() {
     setSelected(next);
   };
 
-  const toggleAll = () => {
-    const selectable = results.filter((r) => !r.error).map((r) => r.id);
-    if (selectable.length > 0 && selected.size === selectable.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(selectable));
-    }
-  };
+  const visibleResults = results.filter(r => !keyword.trim() || (r.title + " " + r.author).toLowerCase().includes(keyword.trim().toLowerCase()));
+  const selectable = visibleResults.filter(r => !r.error).map(r => r.id);
+  const allVisibleSelected = selectable.length > 0 && selectable.every(id => selected.has(id));
+  const toggleAll = () => setSelected(prev => {
+    const next = new Set(prev);
+    selectable.forEach(id => allVisibleSelected ? next.delete(id) : next.add(id));
+    return next;
+  });
 
   /** 切换分 P 选择（多 P 视频可只下载部分分 P） */
   const togglePage = (itemId: number, cid: number) => {
@@ -466,6 +514,7 @@ export default function BiliFetchPage() {
     setResults([]);
     setSelected(new Set());
     setProfileMeta(null);
+    setSource(null);
     addToast("已清空所有解析结果", "success");
   };
 
@@ -501,7 +550,7 @@ export default function BiliFetchPage() {
           {(["video", "profile"] as const).map((value) => (
             <button key={value} type="button" aria-pressed={mode === value} disabled={loading || downloading}
               className={cn("px-3 py-1.5 rounded-lg text-xs glass-surface", mode === value ? "text-purple-500 bg-bg-selected" : "text-text-secondary")}
-              onClick={() => { if (mode !== value) { setMode(value); setLinks(""); setError(null); setProfileMeta(null); } }}>
+              onClick={() => { if (mode !== value) { setMode(value); setLinks(""); setError(null); setProfileMeta(null); setSource(null); } }}>
               {value === "video" ? "视频链接" : "UP 主主页"}
             </button>
           ))}
@@ -518,8 +567,10 @@ export default function BiliFetchPage() {
           {mode === "profile" && <label className="text-xs text-text-secondary flex items-center gap-2">抓取数量
             <select className="glass-surface rounded-lg px-2 py-1" value={profileCount} disabled={loading || downloading} onChange={(e) => setProfileCount(Number(e.target.value))}>
               {[20, 50, 100].map((n) => <option key={n} value={n}>最近 {n} 条</option>)}
+              <option value={30}>逐页加载</option>
             </select>
           </label>}
+          {mode === "profile" && <select aria-label="排序" className="glass-surface rounded-lg px-2 py-1 text-xs" value={order} disabled={loading || downloading} onChange={e => setOrder(e.target.value === "click" ? "click" : "pubdate")}><option value="pubdate">最新发布</option><option value="click">最多播放</option></select>}
           <span className="px-2 py-1 text-xs text-text-disabled self-center">
             {mode === "profile" ? "获取投稿列表，勾选后确认分 P 再下载" : "每行一个链接，支持多 P 选择性下载"}
           </span>
@@ -626,7 +677,9 @@ export default function BiliFetchPage() {
         </div>
       )}
 
-      {profileMeta && <div className="px-6 py-2 text-xs text-text-secondary">本次获取 {profileMeta.loaded} 条 / 共 {profileMeta.total ?? "未知"} 条{profileMeta.hasMore ? " · 还有更多投稿（当前版本最多获取100条）" : ""}</div>}
+      {profileMeta && <div className="px-6 py-2 text-xs text-text-secondary">累计获取 {profileMeta.loaded} 条 / 共 {profileMeta.total ?? "未知"} 条</div>}
+      {mode === "profile" && loading && <Button variant="ghost" onClick={cancelCollection}>停止采集</Button>}
+      {source && source.next !== null && !loading && <Button variant="ghost" disabled={downloading} onClick={() => collectPage(source.url, source.next!, source.size, source.order, false)}>加载更多 / 重试当前页</Button>}
       {/* Divider */}
       <div className="mt-4 border-t border-border-light" />
 
@@ -638,18 +691,19 @@ export default function BiliFetchPage() {
               <input
                 type="checkbox"
                 className="w-4 h-4 accent-purple-500"
-                checked={selected.size === results.filter((r) => !r.error).length}
+                checked={allVisibleSelected}
                 disabled={downloading || loading}
                 onChange={toggleAll}
               />
-              全选
+              全选可见作品
             </label>
+            <Input aria-label="筛选作品" placeholder="标题或作者" value={keyword} onChange={e => setKeyword(e.target.value)} className="max-w-48 text-xs" />
             <span className="text-xs text-text-secondary">
               已选 {selected.size} / 共 {results.length} 项
             </span>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {results.map((item) => (
+            {visibleResults.map((item) => (
               <div key={item.id}>
                 <div
                   className={`flex items-center gap-3 px-6 py-2 border-b border-border-light hover:bg-bg-hover transition-colors cursor-pointer ${selected.has(item.id) ? "bg-bg-selected" : ""} ${item.error ? "opacity-60" : ""}`}

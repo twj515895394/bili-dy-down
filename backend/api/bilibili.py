@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Literal
+from dataclasses import asdict
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -320,6 +322,47 @@ async def bili_fetch_space(req: BiliSpaceRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"主页抓取失败: {e}") from e
+
+
+class BiliSpacePageRequest(BaseModel):
+    url: str = ""
+    mid: int | None = Field(default=None, gt=0)
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=30, ge=1, le=50)
+    order: Literal["pubdate", "click"] = "pubdate"
+
+
+@router.post("/space/page", response_model=dict)
+async def bili_space_page(req: BiliSpacePageRequest):
+    if ctx.bili_user_crawler is None or ctx.bili_url_parser is None:
+        raise HTTPException(503, "B 站服务未初始化")
+    mid = req.mid
+    if req.url:
+        try:
+            parsed = await ctx.bili_url_parser.parse(req.url)
+        except Exception as e:
+            raise HTTPException(400, "无效的 B 站主页链接") from e
+        if not parsed.mid or parsed.type != "user_home" or (mid and mid != parsed.mid):
+            raise HTTPException(400, "主页链接与 MID 不匹配")
+        mid = parsed.mid
+    if not mid:
+        raise HTTPException(400, "请输入主页或 MID")
+    cookie = decrypt_secret(ctx.config_repo.get("bilibili_cookie") or "") or None if ctx.config_repo is not None else None
+    try:
+        posts, total, more = await ctx.bili_user_crawler.fetch_page(mid, req.page, req.page_size, req.order, cookie)
+        items = []
+        for post in posts:
+            item = asdict(post)
+            item["url"] = f"https://www.bilibili.com/video/{post.bvid}"
+            item["publish_time"] = item.pop("pubdate")
+            item["author_mid"] = mid
+            items.append(item)
+        return {"items": items, "total": total, "has_more": more, "next_page": req.page + 1 if more else None,
+                "mid": mid, "page": req.page, "page_size": req.page_size}
+    except BiliAPIError as e:
+        raise HTTPException(400, f"B 站 API 错误: {e.message}") from e
+    except Exception as e:
+        raise HTTPException(502, "投稿列表获取失败，请检查网络或登录状态") from e
 
 
 @router.post("/cookie-test", response_model=BiliCookieTestResult)

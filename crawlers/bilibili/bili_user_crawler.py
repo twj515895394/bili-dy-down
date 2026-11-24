@@ -118,6 +118,41 @@ class BiliUserCrawler:
         self._http_client = http_client
         self._signer = signer
 
+    async def fetch_page(self, mid: int, page: int = 1, page_size: int = 30,
+                         order: str = "pubdate", cookie: str | None = None):
+        """Read one upstream page without restarting at page one."""
+        from crawlers.http_client import pagination_throttle
+        if page > 1:
+            await pagination_throttle()
+        data = await self._http_client.get_json(
+            SPACE_ARC_SEARCH_URL,
+            {"mid": mid, "ps": page_size, "pn": page, "order": order},
+            signed=True, cookie=cookie,
+        )
+        if not isinstance(data, dict):
+            raise ValueError("Invalid space response")
+        rows = (data.get("list") or {}).get("vlist", data.get("vlist"))
+        if not isinstance(rows, list):
+            raise ValueError("Missing submission list")
+        total = (data.get("page") or {}).get("count")
+        items = []
+        seen = set()
+        for v in rows:
+            if not isinstance(v, dict) or not v.get("bvid") or v["bvid"] in seen:
+                continue
+            seen.add(v["bvid"])
+            items.append(BiliPostItem(
+                bvid=v["bvid"], aid=v.get("aid") or 0, title=v.get("title") or "",
+                author=v.get("author") or "", cover_url=_normalize_cover_url(v.get("pic") or ""),
+                duration=_parse_duration(v.get("length") or v.get("duration")),
+                view_count=v.get("play") or v.get("view") or 0,
+                danmaku_count=v.get("danmaku") or v.get("video_review") or 0,
+                pubdate=v.get("created") or v.get("pubdate") or 0,
+                description=v.get("description") or "", mid=mid,
+            ))
+        more = bool(rows) and (page * page_size < total if isinstance(total, int) else len(rows) >= page_size)
+        return items, total, more
+
     async def fetch_user_posts(
         self,
         mid: int,

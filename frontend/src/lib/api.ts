@@ -309,6 +309,16 @@ export async function biliFetchSpace(url: string, mid?: number, max_count: numbe
   });
 }
 
+export interface BiliListPage {
+  items: BiliParseResult[];
+  total: number | null;
+  has_more: boolean;
+  next_page: number | null;
+}
+export async function biliSpacePage(url: string, page: number, page_size: number, order: "pubdate" | "click"): Promise<BiliListPage> {
+  return request("/bilibili/space/page", { method: "POST", body: JSON.stringify({ url, page, page_size, order }) });
+}
+
 export async function biliCookieTest(cookie: string): Promise<{ valid: boolean; nickname: string | null; message: string }> {
   return request("/bilibili/cookie-test", {
     method: "POST",
