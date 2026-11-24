@@ -319,6 +319,10 @@ export async function biliSpacePage(url: string, page: number, page_size: number
   return request("/bilibili/space/page", { method: "POST", body: JSON.stringify({ url, page, page_size, order }) });
 }
 
+export async function biliCollectionPage(url: string, page: number, page_size: number): Promise<BiliListPage> {
+  return request("/bilibili/collections/page", { method: "POST", body: JSON.stringify({ url, page, page_size }) });
+}
+
 export async function biliCookieTest(cookie: string): Promise<{ valid: boolean; nickname: string | null; message: string }> {
   return request("/bilibili/cookie-test", {
     method: "POST",

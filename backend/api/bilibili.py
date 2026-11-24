@@ -365,6 +365,29 @@ async def bili_space_page(req: BiliSpacePageRequest):
         raise HTTPException(502, "投稿列表获取失败，请检查网络或登录状态") from e
 
 
+class BiliCollectionPageRequest(BaseModel):
+    url: str
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=30, ge=1, le=30)
+
+
+@router.post("/collections/page", response_model=dict)
+async def bili_collection_page(req: BiliCollectionPageRequest):
+    """Read public collections, series and favorites; never request arbitrary hosts."""
+    from crawlers.bilibili.bili_collection_crawler import fetch_collection_page
+    if ctx.bili_http_client is None:
+        raise HTTPException(503, "B 站服务未初始化")
+    cookie = decrypt_secret(ctx.config_repo.get("bilibili_cookie") or "") or None if ctx.config_repo is not None else None
+    try:
+        return await fetch_collection_page(ctx.bili_http_client, req.url, req.page, req.page_size, cookie)
+    except BiliAPIError as e:
+        raise HTTPException(400, f"B 站 API 错误: {e.message}") from e
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    except Exception as e:
+        raise HTTPException(502, "集合获取失败，请检查网络及访问权限") from e
+
+
 @router.post("/cookie-test", response_model=BiliCookieTestResult)
 async def bili_cookie_test(req: BiliCookieTestRequest):
     """测试 B 站 Cookie 的有效性。
