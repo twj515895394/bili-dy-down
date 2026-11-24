@@ -11,8 +11,10 @@ const API_BASE = "http://127.0.0.1:18989/api";
  * 前端 <img> 指向本地地址即可稳定渲染。
  */
 export function proxyImageUrl(url?: string | null): string {
-  if (!url) return "";
-  return API_BASE + "/covers?url=" + encodeURIComponent(url);
+  if (!url?.trim()) return "";
+  const source = url.trim().startsWith("//") ? "https:" + url.trim() : url.trim();
+  if (!/^https?:\/\//i.test(source)) return "";
+  return API_BASE + "/covers?url=" + encodeURIComponent(source);
 }
 
 /** 通用请求包装 */

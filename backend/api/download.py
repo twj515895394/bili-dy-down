@@ -226,6 +226,7 @@ async def enqueue_download_items(
         for item_data in items:
             item_type = item_data.get("type", "video")
             aweme_id = item_data.get("aweme_id")
+            cover_url = item_data.get("cover_url")
             media_url = item_data.get("no_watermark_url") or ""
             image_urls = item_data.get("image_urls") or []
             item_video_urls = item_data.get("item_video_urls") or []
@@ -235,6 +236,7 @@ async def enqueue_download_items(
             if not (media_url or image_urls) and aweme_id and ctx.video_parser is not None:
                 try:
                     video_info = await ctx.video_parser.parse_video(aweme_id, cookie)
+                    cover_url = cover_url or video_info.cover_url
                     if item_type == "image_set" and video_info.image_urls:
                         image_urls = video_info.image_urls
                         item_video_urls = video_info.item_video_urls
@@ -274,7 +276,7 @@ async def enqueue_download_items(
                 title=item_data.get("title"),
                 author=item_data.get("author"),
                 type=item_type,
-                cover_url=item_data.get("cover_url"),
+                cover_url=cover_url,
                 image_count=(
                     len(image_urls)
                     if item_type == "image_set" and image_urls

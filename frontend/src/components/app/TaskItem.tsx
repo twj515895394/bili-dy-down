@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Play, Pause, RotateCw, FolderOpen, RefreshCw, Trash2 } from "lucide-react";
 import { openInFolder } from "../../lib/tauri";
 import { proxyImageUrl } from "../../lib/api";
@@ -24,6 +25,9 @@ const statusConfig = {
 
 export function TaskItem({ task, onPause, onResume, onRetry, onDelete }: TaskItemProps) {
   const config = statusConfig[task.status];
+  const [failedCover, setFailedCover] = useState<string | null>(null);
+  const coverSrc = proxyImageUrl(task.coverUrl);
+  const showCover = Boolean(coverSrc && failedCover !== coverSrc);
   const isFailed = task.status === "failed";
   const typeBadgeVariant = task.type === "video" ? "video" : task.type === "image_set" ? "image_set" : "long_video" as const;
 
@@ -34,16 +38,13 @@ export function TaskItem({ task, onPause, onResume, onRetry, onDelete }: TaskIte
 
   return (
     <div className={`flex items-center gap-3 px-6 py-3 border-b border-border-light hover:bg-bg-hover transition-colors ${isFailed ? "border-l-3 border-l-error" : ""}`}>
-      {/* Thumbnail */}
-      <div className="w-16 h-16 rounded-sm bg-bg-hover flex-shrink-0 flex items-center justify-center text-text-disabled text-xs">
-        {task.coverUrl ? (
-          <img src={proxyImageUrl(task.coverUrl)} alt={task.title} className="w-full h-full object-cover rounded-sm" />
-        ) : (
-          <div className="flex flex-col items-center">
-            <span className="text-lg">📄</span>
-          </div>
-        )}
-      </div>
+      {showCover && (
+        <div className="w-16 h-16 rounded-sm bg-bg-hover flex-shrink-0 overflow-hidden">
+          <img key={coverSrc} src={coverSrc} alt="" loading="lazy" decoding="async"
+            className="w-full h-full object-cover"
+            onError={() => setFailedCover(coverSrc)} />
+        </div>
+      )}
 
       {/* Info */}
       <div className="flex-1 min-w-0">

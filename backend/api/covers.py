@@ -184,12 +184,17 @@ async def proxy_cover(url: str = Query(...)):
     - 流式接收并校验大小上限，避免大体积响应全量载入内存。
     """
     target = _validate_url(url)
+    from urllib.parse import urlsplit
+    host = (urlsplit(target).hostname or "").lower()
+    douyin_domains = ("douyinpic.com", "douyincdn.com", "douyin.com", "byteimg.com", "iesdouyin.com", "pstatp.com", "snssdk.com", "ibytedtos.com")
+    is_douyin = any(host == d or host.endswith("." + d) for d in douyin_domains)
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
             "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         ),
-        "Referer": "https://www.bilibili.com/",
+        "Referer": "https://www.douyin.com/" if is_douyin else "https://www.bilibili.com/",
+        "Accept": "image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8",
     }
     try:
         async with httpx.AsyncClient(
@@ -197,38 +202,25 @@ async def proxy_cover(url: str = Query(...)):
             timeout=_FETCH_TIMEOUT,
             transport=_SSRFGuardTransport(),
         ) as client:
-            resp = await client.get(target, headers=headers)
+            async with client.stream("GET", target, headers=headers) as resp:
+                if resp.status_code != 200:
+                    raise HTTPException(502, f"upstream {resp.status_code}")
+                content_type = resp.headers.get("content-type", "").split(";")[0].strip().lower()
+                if content_type not in _ALLOWED_CONTENT_TYPES:
+                    raise HTTPException(502, "unexpected image content-type")
+                declared = resp.headers.get("content-length")
+                if declared and declared.isdigit() and int(declared) > _MAX_COVER_BYTES:
+                    raise HTTPException(413, "image too large")
+                body = bytearray()
+                async for chunk in resp.aiter_bytes(64 * 1024):
+                    body.extend(chunk)
+                    if len(body) > _MAX_COVER_BYTES:
+                        raise HTTPException(413, "image too large")
+                if not body:
+                    raise HTTPException(502, "empty image")
     except httpx.ConnectError as exc:
-        raise HTTPException(
-            status_code=400, detail=f"target blocked or unreachable: {exc}"
-        ) from exc
+        raise HTTPException(400, "cover host blocked or unreachable") from exc
     except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail=f"fetch failed: {exc}") from exc
-    if resp.status_code != 200:
-        raise HTTPException(status_code=502, detail=f"upstream {resp.status_code}")
-
-    content_type = resp.headers.get("content-type", "").split(";")[0].strip().lower()
-    if content_type and content_type not in _ALLOWED_CONTENT_TYPES:
-        raise HTTPException(status_code=502, detail=f"unexpected content-type {content_type}")
-
-    # 预检 Content-Length，提前拒绝超大响应
-    declared = resp.headers.get("content-length")
-    if declared is not None:
-        try:
-            if int(declared) > _MAX_COVER_BYTES:
-                raise HTTPException(status_code=413, detail="image too large")
-        except ValueError:
-            pass
-
-    # 流式接收并校验实际大小上限，避免 resp.content 全量载入内存
-    body = bytearray()
-    async for chunk in resp.aiter_bytes(64 * 1024):
-        body.extend(chunk)
-        if len(body) > _MAX_COVER_BYTES:
-            raise HTTPException(status_code=413, detail="image too large")
-
-    return Response(
-        content=bytes(body),
-        media_type=content_type or "image/jpeg",
-        headers={"Cache-Control": "public, max-age=86400"},
-    )
+        raise HTTPException(502, "cover fetch failed") from exc
+    return Response(content=bytes(body), media_type=content_type,
+                    headers={"Cache-Control": "public, max-age=86400"})
