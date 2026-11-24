@@ -41,6 +41,8 @@ DEFAULT_CONFIGS: dict[str, str] = {
     "chunk_size": str(DEFAULT_CHUNK_SIZE),
     "retry_count": str(DEFAULT_RETRY_COUNT),
     "metadata_format": DEFAULT_METADATA_FORMAT,
+    "group_by_author": "false",
+    "skip_existing": "true",
     "onboarding_done": "false",
     "notification_enabled": "true" if DEFAULT_NOTIFICATION_ENABLED else "false",
     "sound_enabled": "true" if DEFAULT_SOUND_ENABLED else "false",

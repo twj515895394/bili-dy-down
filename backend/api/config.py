@@ -58,6 +58,8 @@ class ConfigResponse(BaseModel):
     concurrency: int
     chunk_size: int
     metadata_format: str
+    group_by_author: bool = False
+    skip_existing: bool = True
     onboarding_done: bool
     notification_enabled: bool
     sound_enabled: bool
@@ -73,6 +75,8 @@ class UpdateConfigRequest(BaseModel):
     concurrency: int | None = None
     chunk_size: int | None = None
     metadata_format: str | None = None
+    group_by_author: bool | None = None
+    skip_existing: bool | None = None
     onboarding_done: bool | None = None
     notification_enabled: bool | None = None
     sound_enabled: bool | None = None
@@ -95,6 +99,8 @@ async def get_config():
         concurrency=int(config.get("concurrency", "3")),
         chunk_size=int(config.get("chunk_size", "1048576")),
         metadata_format=config.get("metadata_format", "json"),
+        group_by_author=config.get("group_by_author", "false") == "true",
+        skip_existing=config.get("skip_existing", "true") == "true",
         onboarding_done=config.get("onboarding_done", "false") == "true",
         notification_enabled=config.get("notification_enabled", "true") == "true",
         sound_enabled=config.get("sound_enabled", "true") == "true",
@@ -125,6 +131,10 @@ async def update_config(req: UpdateConfigRequest):
             ctx.scheduler.set_max_concurrent(req.concurrency)
     if req.chunk_size is not None:
         ctx.config_repo.set("chunk_size", str(req.chunk_size))
+    for key in ("group_by_author", "skip_existing"):
+        value = getattr(req, key)
+        if value is not None:
+            ctx.config_repo.set(key, "true" if value else "false")
     if req.metadata_format is not None:
         ctx.config_repo.set("metadata_format", req.metadata_format)
     if req.onboarding_done is not None:

@@ -210,7 +210,16 @@ class Downloader:
         task = self._task_repo.get(task_item.task_id)
         if task is None or not task.download_dir:
             raise ValueError(f"task_id={task_item.task_id} 的 download_dir 为空或 task 不存在")
-        return Path(task.download_dir)
+        root = Path(task.download_dir)
+        from app.repositories import ConfigRepository
+        if ConfigRepository(self._conn).get("group_by_author") == "true":
+            author = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", task_item.author or "未知作者").strip(" .")[:60].strip(" .") or "未知作者"
+            # Fixed prefix also prevents Windows reserved device names.
+            target = root / ("B站" if task_item.bvid else "抖音") / ("作者_" + author)
+            if not target.resolve().is_relative_to(root.resolve()):
+                raise ValueError("作者目录越界")
+            return target
+        return root
 
     def _get_final_path(
         self,

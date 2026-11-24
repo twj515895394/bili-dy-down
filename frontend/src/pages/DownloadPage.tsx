@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { Search, RefreshCw } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -12,6 +12,9 @@ import type { WsMessage } from "../hooks/useWebSocket";
 
 export default function DownloadPage() {
   const { downloadSearch: search, setDownloadSearch: setSearch } = useUiInputStore();
+  const [platform, setPlatform] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [batch, setBatch] = useState("");
   const {
     items, loading, error,
     loadTasks, applyProgressUpdate,
@@ -77,8 +80,8 @@ export default function DownloadPage() {
   // 过滤
   const filtered = items.filter(
     (t) =>
-      t.title.toLowerCase().includes(search.toLowerCase()) ||
-      t.author.toLowerCase().includes(search.toLowerCase()),
+      (platform === "all" || t.platform === platform) && (statusFilter === "all" || t.status === statusFilter) && (!batch || String(t.taskId) === batch) &&
+      (t.title.toLowerCase().includes(search.toLowerCase()) || t.author.toLowerCase().includes(search.toLowerCase())),
   );
 
   // 统计
@@ -133,6 +136,12 @@ export default function DownloadPage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-2 px-6 py-2 border-b border-border-light text-xs">
+        <select aria-label="平台" className="glass-surface rounded px-2 py-1" value={platform} onChange={e=>setPlatform(e.target.value)}><option value="all">全部平台</option><option value="douyin">抖音</option><option value="bilibili">B站</option></select>
+        <select aria-label="状态" className="glass-surface rounded px-2 py-1" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">全部状态</option>{["pending","downloading","paused","processing","completed","failed"].map(s=><option key={s} value={s}>{({pending:"等待",downloading:"下载中",paused:"暂停",processing:"处理中",completed:"完成",failed:"失败"} as Record<string,string>)[s]}</option>)}</select>
+        <select aria-label="批次" className="glass-surface rounded px-2 py-1" value={batch} onChange={e=>setBatch(e.target.value)}><option value="">全部批次</option>{[...new Set(items.map(t=>t.taskId))].map(id=><option key={id} value={id}>批次 {id}</option>)}</select>
+        <Button variant="ghost" size="sm" onClick={async()=>{try{const data=await api.exportDownloadHistory();const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));const a=document.createElement("a");a.href=url;a.download="download-history.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch{addToast("导出失败","error");}}}>导出历史 JSON</Button>
+      </div>
       {/* Error State */}
       {error && (
         <div className="mx-6 mt-3 p-3 bg-red-50 border border-red-200 rounded-sm">

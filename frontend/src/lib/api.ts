@@ -61,6 +61,9 @@ export interface TaskItemResponse {
   cover_url: string | null;
   fail_reason: string | null;
   local_path: string | null;
+  bvid?: string | null;
+  cid?: number | null;
+  page?: number;
 }
 
 export interface ConfigResponse {
@@ -68,6 +71,8 @@ export interface ConfigResponse {
   concurrency: number;
   chunk_size: number;
   metadata_format: string;
+  group_by_author?: boolean;
+  skip_existing?: boolean;
   onboarding_done: boolean;
   /** 通知总开关 */
   notification_enabled: boolean;
@@ -523,3 +528,5 @@ export async function enqueueBiliVideo(item: {bvid: string; title: string; autho
   if (items.length) await startDownload({source_type:"bilibili", items, download_dir:downloadDir});
   return {queued:items.length, failed};
 }
+
+export async function exportDownloadHistory(): Promise<{items: Record<string, unknown>[]}> { return request("/download/history/export"); }

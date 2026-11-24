@@ -128,6 +128,9 @@ class TaskItemResponse(BaseModel):
     cover_url: str | None = None
     fail_reason: str | None
     local_path: str | None
+    bvid: str | None = None
+    cid: int | None = None
+    page: int = 0
 
 
 # === 内部辅助 ===
@@ -169,6 +172,35 @@ async def enqueue_download_items(
 
     # 审计 P0-3：download_dir 必须与配置目录一致（封堵任意路径写）
     download_dir = _validate_download_dir(download_dir, ctx.config_repo.get("download_dir") or "")
+
+    # Skip completed files and active duplicate video parts; never dedup partial image selections.
+    def identity(item):
+        if item.get("bvid") and item.get("cid"):
+            return ("bilibili", item["bvid"], int(item["cid"]))
+        if item.get("aweme_id") and item.get("type", "video") != "image_set" and not item.get("bvid"):
+            return ("douyin", item["aweme_id"], item.get("type", "video"))
+        return None
+
+    if items and ctx.config_repo.get("skip_existing") != "false":
+        seen = set()
+        for status in ("completed", "pending", "downloading", "processing", "paused"):
+            for old in ctx.task_item_repo.get_by_status(status):
+                if status == "completed" and (not old.local_path or not os.path.exists(old.local_path)):
+                    continue
+                key = identity({"bvid": old.bvid, "cid": old.cid, "aweme_id": old.aweme_id, "type": old.type})
+                if key:
+                    seen.add(key)
+        unique = []
+        for item in items:
+            key = identity(item)
+            if key and key in seen:
+                continue
+            if key:
+                seen.add(key)
+            unique.append(item)
+        if not unique:
+            raise HTTPException(409, "所选视频已下载或正在队列中；可在设置关闭跳过重复")
+        items = unique
 
     # 创建任务
     task = Task(
@@ -329,6 +361,7 @@ async def list_task_items(task_id: int):
             cover_url=item.cover_url,
             fail_reason=item.fail_reason,
             local_path=item.local_path,
+            bvid=item.bvid, cid=item.cid, page=item.page,
         )
         for item in items
     ]
@@ -589,3 +622,17 @@ async def verify_completed_files():
         "missing_count": len(missing_items),
         "missing_items": missing_items,
     }
+
+@router.get("/history/export")
+async def export_history():
+    """Safe metadata export: omit media CDN URLs, cookies and auth fields."""
+    if ctx.task_repo is None or ctx.task_item_repo is None:
+        raise HTTPException(503, "Service not ready")
+    rows = []
+    for task in ctx.task_repo.get_all():
+        for item in ctx.task_item_repo.get_by_task(task.id):
+            rows.append(dict(task_id=task.id, item_id=item.id, platform="bilibili" if item.bvid else "douyin",
+                bvid=item.bvid, cid=item.cid, page=item.page, aweme_id=item.aweme_id, title=item.title,
+                author=item.author, type=item.type, status=item.status, local_path=item.local_path,
+                created_at=item.created_at, updated_at=item.updated_at))
+    return {"items": rows}

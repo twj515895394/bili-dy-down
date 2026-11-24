@@ -218,6 +218,15 @@ export default function SettingsPanel() {
                 </div>
               </div>
               <div className="border-t border-border-light" />
+              {(["group_by_author", "skip_existing"] as const).map(key => <label key={key} className="flex items-center justify-between h-12 text-sm">
+                {key === "group_by_author" ? "按平台及作者分目录" : "跳过已下载或排队的视频"}
+                <input type="checkbox" checked={config?.[key] ?? (key === "skip_existing")} disabled={!config} onChange={async e => {
+                  const checked = e.target.checked;
+                  try { await api.updateConfig({[key]:checked}); setConfig(prev=>prev?{...prev,[key]:checked}:prev); }
+                  catch {addToast("保存设置失败","error");}
+                }}/>
+              </label>)}
+              <div className="border-t border-border-light" />
               <div className="flex items-center justify-between h-12">
                 <span className="text-sm text-text-primary">并发下载数</span>
                 <div className="flex items-center gap-3">

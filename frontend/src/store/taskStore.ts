@@ -9,6 +9,7 @@ export interface DisplayTask {
   id: number;
   taskId: number;
   awemeId: string;
+  platform: "douyin" | "bilibili";
   title: string;
   author: string;
   type: "video" | "image_set" | "long_video";
@@ -29,6 +30,7 @@ function mapTaskItem(item: TaskItemResponse): DisplayTask {
     id: item.id ?? 0,
     taskId: item.task_id,
     awemeId: item.aweme_id ?? "",
+    platform: item.bvid ? "bilibili" : "douyin",
     title: item.title ?? "",
     author: item.author ?? "",
     type: (item.type as DisplayTask["type"]) || "video",
