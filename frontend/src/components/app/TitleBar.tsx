@@ -53,9 +53,9 @@ export function TitleBar() {
       <div className="flex items-center gap-2.5 pl-3 pr-4 h-full" data-tauri-drag-region>
         <AppLogo size={24} className="lift-hover shrink-0" />
         <span className="text-[13px] font-bold tracking-tight select-none">
-          <span className="text-text-primary">Video</span>
-          <span className="bg-gradient-to-r from-purple-500 to-fuchsia-500 bg-clip-text text-transparent">Get</span>
-          <span className="text-text-primary">Tool</span>
+          <span className="text-text-primary">Bili</span>
+          <span className="bg-gradient-to-r from-purple-500 to-fuchsia-500 bg-clip-text text-transparent">Dy</span>
+          <span className="text-text-primary">Down</span>
         </span>
       </div>
 

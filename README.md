@@ -13,7 +13,7 @@
 
   <p align="center">
     <a href="https://github.com/twj515895394/bili-dy-down/releases">
-      <img src="https://img.shields.io/github/v/release/Cat-Drink/VideoGetTool?style=flat-square&label=%E7%89%88%E6%9C%AC&color=7C3AED" alt="版本">
+      <img src="https://img.shields.io/github/v/release/twj515895394/bili-dy-down?style=flat-square&label=%E7%89%88%E6%9C%AC&color=7C3AED" alt="版本">
     </a>
     <img src="https://img.shields.io/badge/Python-3.11+-4B8BBE?style=flat-square&logo=python&logoColor=white" alt="Python">
     <img src="https://img.shields.io/badge/UI-Tauri%20%2F%20React-41CD52?style=flat-square&logo=react&logoColor=white" alt="Tauri React">
@@ -45,7 +45,7 @@
 
 <br>
 
-> **BiliDyDown** —— 面向 B站与抖音的轻量桌面视频采集和下载工具，基于上游 BiliDyDown 增强开发。
+> **BiliDyDown** —— 面向 B站与抖音的轻量桌面视频采集和下载工具，基于上游 [VideoGetTool](https://github.com/Cat-Drink/VideoGetTool) 增强开发。
 > 一款面向非技术用户的 Windows 桌面端应用，支持抖音（Douyin）与 B 站（Bilibili）短视频、图文、长视频的数据抓取与下载。
 > 参考 [Evil0ctal/Douyin_TikTok_Download_API](https://github.com/Evil0ctal/Douyin_TikTok_Download_API) 的设计思路，但 **不直接复用其代码**，有效降低外部依赖风险。
 
@@ -138,7 +138,7 @@
 > <em>新版界面截图正在路上，以下为 v0.4.x 早期版本布局预览 — 实际界面以最新 Release 为准。</em>
 
 <p align="center">
-  <img src="assets/VGT.jpg" alt="早期版本界面预览" width="560" style="border-radius: 16px;">
+  <p>历史界面截图暂不展示；实际界面以当前版本为准。</p>
 </p>
 
 > 测试套件已扩展至 **828 项**（覆盖签到算法、链接解析、主页抓取、订阅模式、B 站 WBI 签名与 DASH 下载、后端 API 等模块）。
@@ -167,7 +167,7 @@
 从 [GitHub Releases](https://github.com/twj515895394/bili-dy-down/releases) 页面下载最新版安装包：
 
 ```text
-BiliDyDown_0.3.0_x64-setup.exe
+BiliDyDown_<version>_x64-setup.exe
 ```
 
 运行安装包，按向导提示完成安装即可。
@@ -489,7 +489,7 @@ winget install Gyan.FFmpeg
 <br>
 
 [查看 LICENSE 文件](LICENSE) · [第三方归属与许可证说明](THIRD-PARTY-NOTICES.md) · [许可证迁移说明 (MIT → Apache 2.0)](docs/compliance/v0.3.0-license-migration.md)
-[GitHub 仓库](https://github.com/Cat-Drink/VideoGetTool) ·
+[GitHub 仓库](https://github.com/twj515895394/bili-dy-down) ·
 [提交 Issue](https://github.com/twj515895394/bili-dy-down/issues)
 
 <br>

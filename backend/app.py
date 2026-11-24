@@ -39,7 +39,7 @@ from backend.state import ctx
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """FastAPI 生命周期：启动时初始化，关闭时清理。"""
     log = get_logger(__name__)
-    log.info("=== VideoGetTool Python Sidecar 启动 ===")
+    log.info("=== BiliDyDown Python Sidecar 启动 ===")
 
     # 1. 日志与目录
     setup_logger()
@@ -300,7 +300,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 # ===== FastAPI 应用 =====
 app = FastAPI(
-    title="VideoGetTool Python Sidecar",
+    title="BiliDyDown Python Sidecar",
     version="0.4.1",
     lifespan=lifespan,
 )
