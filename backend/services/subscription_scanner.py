@@ -143,6 +143,13 @@ class SubscriptionScanner:
                 return ScanResult(subscription_id, status="error", error="订阅不存在")
 
             try:
+                if sub.sec_user_id.startswith("bilibili:"):
+                    from backend.services.bili_subscription import scan_bili_subscription
+                    new_count, scanned_items = await scan_bili_subscription(self.subscription_repo, sub)
+                    self.subscription_repo.update(subscription_id, last_scan_at=now_iso(), last_scan_status="ok", last_scan_error=None)
+                    if new_count:
+                        await self._broadcast(subscription_id, new_count)
+                    return ScanResult(subscription_id=subscription_id, new_count=new_count, scanned_items=scanned_items)
                 # 1. 解析主页 URL → sec_user_id（缺失时回退订阅中已有值）
                 sec_user_id = sub.sec_user_id
                 try:

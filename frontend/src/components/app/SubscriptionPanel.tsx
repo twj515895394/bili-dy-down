@@ -181,7 +181,7 @@ export default function SubscriptionPanel() {
             <div className="p-4 pb-2">
               <div className="flex items-center gap-2">
                 <input
-                  placeholder="粘贴用户主页链接，例如 https://www.douyin.com/user/xxxxx"
+                  placeholder="粘贴抖音或 B站 UP 主主页链接"
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleAdd()}

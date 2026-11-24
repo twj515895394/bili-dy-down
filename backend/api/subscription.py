@@ -160,6 +160,29 @@ async def add_subscription(req: SubscriptionCreateRequest):
             detail=f"扫描间隔需在 {MIN_INTERVAL_MINUTES}–{MAX_INTERVAL_MINUTES} 分钟之间",
         )
 
+    # Namespaced B站 MID fits the existing subscription identity column.
+    from urllib.parse import urlsplit
+    host = urlsplit(req.url).hostname or ""
+    if host in ("space.bilibili.com", "b23.tv", "www.bilibili.com", "bilibili.com"):
+        if ctx.bili_url_parser is None:
+            raise HTTPException(503, "B站服务未初始化")
+        try:
+            bili = await ctx.bili_url_parser.parse(req.url)
+            if bili.type != "user_home" or not bili.mid:
+                raise ValueError("不是UP主主页")
+            identity = f"bilibili:{bili.mid}"
+        except Exception as e:
+            raise HTTPException(400, "无法识别B站主页") from e
+        if ctx.subscription_repo.exists_sec_user_id(identity):
+            raise HTTPException(409, "该用户主页已订阅")
+        sub_id = ctx.subscription_repo.create(Subscription(id=None, url=f"https://space.bilibili.com/{bili.mid}",
+            sec_user_id=identity, name=req.name or "", interval_minutes=interval, enabled=1,
+            max_items=max(1, min(req.max_items, 200))))
+        created = ctx.subscription_repo.get(sub_id)
+        if created is None:
+            raise HTTPException(500, "订阅创建失败")
+        return _subscription_response(created)
+
     # 解析 URL → sec_user_id
     try:
         parsed = await ctx.url_parser.parse(req.url)
@@ -287,6 +310,13 @@ async def accept_subscription_item(item_id: int):
     # 复用下载入队逻辑
     from backend.api.download import enqueue_download_items
 
+    sub = ctx.subscription_repo.get(item.subscription_id)
+    if sub and sub.sec_user_id.startswith("bilibili:"):
+        from backend.services.bili_subscription import enqueue_bili_subscription
+        task_id = await enqueue_bili_subscription(item)
+        ctx.subscription_repo.update_item_status(item_id, SubscriptionItemStatus.ACCEPTED.value)
+        return {"message": "已入队下载", "task_id": task_id, "item_id": item_id}
+
     task_id = await enqueue_download_items(
         source_type="subscription",
         source_url=item.url,
@@ -353,6 +383,19 @@ async def scan_and_collect(sub_id: int):
         return {"message": "没有新作品", "queued": 0}
 
     from backend.api.download import enqueue_download_items
+
+    if sub.sec_user_id.startswith("bilibili:"):
+        from backend.services.bili_subscription import enqueue_bili_subscription
+        queued = 0
+        task_id = None
+        for it in new_items:
+            try:
+                task_id = await enqueue_bili_subscription(it)
+                ctx.subscription_repo.update_item_status(it.id, SubscriptionItemStatus.ACCEPTED.value)
+                queued += 1
+            except Exception:
+                continue
+        return {"message": f"已入队 {queued} 个，失败 {len(new_items)-queued} 个", "queued": queued, "task_id": task_id, "scan_status": result.status, "scan_error": result.error}
 
     items_payload = [
         {
