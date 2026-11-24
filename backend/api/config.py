@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import os
+import tempfile
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, HTTPException
@@ -123,6 +125,15 @@ async def update_config(req: UpdateConfigRequest):
         # 审计 N2：规范化存储（展开用户目录 + 绝对路径），
         # 与入队接口的 _validate_download_dir 严格一致校验配套
         abs_dir = os.path.abspath(os.path.expanduser(raw))
+        try:
+            directory = Path(abs_dir)
+            directory.mkdir(parents=True, exist_ok=True)
+            if not directory.is_dir():
+                raise NotADirectoryError(abs_dir)
+            with tempfile.NamedTemporaryFile(prefix=".bilidydown-check-", dir=directory):
+                pass
+        except (OSError, ValueError) as exc:
+            raise HTTPException(400, "下载目录不可创建或不可写，请检查路径和权限") from exc
         ctx.config_repo.set("download_dir", abs_dir)
     if req.concurrency is not None:
         ctx.config_repo.set("concurrency", str(req.concurrency))

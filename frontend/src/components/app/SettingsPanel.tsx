@@ -17,7 +17,7 @@ import {
 import { Button } from "../ui/button";
 import { useToastStore } from "../../store/toastStore";
 import { usePanelStore } from "../../store/panelStore";
-import { pickDirectory, openExternal, getAppVersion } from "../../lib/tauri";
+import { pickDirectory, openExternal, getAppVersion, openInFolder } from "../../lib/tauri";
 import * as api from "../../lib/api";
 import { cn } from "../../lib/utils";
 
@@ -75,7 +75,7 @@ export default function SettingsPanel() {
   const [customSoundUrl, setCustomSoundUrl] = useState("");
   const [savingNotify, setSavingNotify] = useState(false);
   const [appVersion, setAppVersion] = useState("v0.3.0");
-  const [openSection, setOpenSection] = useState<string | null>("account");
+  const [openSection, setOpenSection] = useState<string | null>("download");
   const { addToast } = useToastStore();
   const { openPanel } = usePanelStore();
 
@@ -127,10 +127,11 @@ export default function SettingsPanel() {
     if (dir && config) {
       try {
         await api.updateConfig({ download_dir: dir });
-        setConfig({ ...config, download_dir: dir });
+        const updated = await api.fetchConfig();
+        setConfig(prev => prev ? { ...prev, download_dir: updated.download_dir } : updated);
         addToast("下载目录已更新", "success");
-      } catch {
-        addToast("保存目录失败", "error");
+      } catch (e) {
+        addToast(e instanceof Error ? e.message : "保存目录失败", "error");
       }
     }
   };
@@ -211,13 +212,18 @@ export default function SettingsPanel() {
               <div className="flex items-center justify-between h-12">
                 <span className="text-sm text-text-primary">下载目录</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-text-secondary max-w-48 truncate">{config?.download_dir || "未设置"}</span>
+                  <span title={config?.download_dir} className="text-xs text-text-secondary max-w-48 truncate">{config?.download_dir || "未设置"}</span>
                   <Button variant="secondary" size="sm" onClick={handlePickDirectory}>
                     <FolderOpen size={14} className="mr-1" /> 浏览...
                   </Button>
+                  <Button variant="ghost" size="sm" disabled={!config?.download_dir} onClick={async () => {
+                    try { if (config?.download_dir) await openInFolder(config.download_dir); }
+                    catch { addToast("无法打开目录，请检查目录是否存在", "error"); }
+                  }}>定位目录</Button>
                 </div>
               </div>
               <div className="border-t border-border-light" />
+              <p className="py-2 text-xs text-text-secondary">目录修改仅影响新建任务，已创建任务保留原下载根目录。</p>
               {(["group_by_author", "skip_existing"] as const).map(key => <label key={key} className="flex items-center justify-between h-12 text-sm">
                 {key === "group_by_author" ? "按平台及作者分目录" : "跳过已下载或排队的视频"}
                 <input type="checkbox" checked={config?.[key] ?? (key === "skip_existing")} disabled={!config} onChange={async e => {
